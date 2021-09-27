@@ -1,59 +1,89 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-
-const database = {
-	users: [
-		{
-			id: '123',
-			name: 'teste',
-			email: 'teste@teste.com',
-			password: '123',
-			entries: 0,
-			joined: new Date()
-		}
-	]
-};
+const cors = require('cors');
+const bcrypt = require('bcrypt-nodejs');
+const knex = require('knex')({
+	client: 'pg',
+	connection: {
+		host: '127.0.0.1',
+		user: 'kenji',
+		password: '123',
+		database: 'smart-brain'
+	}
+});
 
 const app = express();
 
 app.use(bodyParser.json());
+app.use(cors());
 
 app.get('/', (req, res) => {
 	res.send('it works');
 });
 
 app.post('/signin', (req, res) => {
-	req.body.email === database.users[0].email && req.body.password === database.users[0].password
-		? res.json('success')
-		: res.status(400).json('error logging in');
+	knex
+		.select('email', 'hash')
+		.from('login')
+		.where('email', '=', req.body.email)
+		.then((data) => {
+			return bcrypt.compareSync(req.body.password, data[0].hash)
+				? knex.select('*').from('users').where('email', '=', req.body.email).then((user) => res.json(user[0]))
+				: res.status(400).json('wrong credentials');
+		})
+		.catch((error) => {
+			res.status(400).json('error getting user');
+		});
 });
 
 app.post('/register', (req, res) => {
 	const { email, name, password } = req.body;
-	database.users.push({
-		id: '124',
-		name,
-		email,
-		password,
-		entries: 0,
-		joined: new Date()
-	});
-
-	res.json(database.users[database.users.length - 1]);
+	const hash = bcrypt.hashSync(password);
+	knex
+		.transaction((trx) => {
+			trx
+				.insert({
+					hash,
+					email
+				})
+				.into('login')
+				.returning('email')
+				.then((loginEmail) => {
+					return trx('users')
+						.returning('*')
+						.insert({
+							name,
+							email: loginEmail[0],
+							joined: new Date()
+						})
+						.then((user) => res.json(user[0]));
+				})
+				.then(trx.commit)
+				.catch(trx.rollback);
+		})
+		.catch((err) => res.status(400).json('unable to register'));
 });
 
 app.get('/profile/:id', (req, res) => {
 	const { id } = req.params;
-	database.users.filter((user) => {
-		return Number(id) === Number(user.id) ? res.json(user) : res.status(404).json('not found');
-	});
+	knex
+		.select('*')
+		.from('users')
+		.where({ id })
+		.then((user) => {
+			user.length ? res.json(user[0]) : res.status(404).json('not found');
+		})
+		.catch((err) => res.status(404).json('error getting user'));
 });
 
-app.post('/image', (req, res) => {
+app.put('/image', (req, res) => {
 	const { id } = req.body;
-	database.users.filter((user) => {
-		return Number(id) === Number(user.id) ? res.json(user.entries++) : res.status(404).json('not found');
-	});
+	knex('users')
+		.where('id', '=', id)
+		.increment('entries', 1)
+		.returning('entries')
+		.then((entries) => res.json(entries[0]))
+		.catch((e) => res.status(400).json('unable to get entries'));
 });
 
 app.listen(3000, () => {
