@@ -9,10 +9,8 @@ const { image, apiCall } = require('./controllers/image');
 const knex = require('knex')({
 	client: 'pg',
 	connection: {
-		host: '127.0.0.1',
-		user: 'kenji',
-		password: '123',
-		database: 'smart-brain'
+		connectionString: process.env.DATABASE_URL,
+		ssl: true
 	}
 });
 
