@@ -4,13 +4,12 @@ module.exports = Register = (knex, bcrypt) => (req, res) => {
 	const hash = bcrypt.hashSync(password);
 	knex
 		.transaction((trx) => {
-			trx
+			trx('login')
+				.returning('email')
 				.insert({
 					hash,
 					email
 				})
-				.into('login')
-				.returning('email')
 				.then((loginEmail) => {
 					return trx('users')
 						.returning('*')
