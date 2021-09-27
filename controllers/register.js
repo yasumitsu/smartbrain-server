@@ -5,6 +5,7 @@ module.exports = Register = (knex, bcrypt) => (req, res) => {
 	knex
 		.transaction((trx) => {
 			trx('login')
+				.transacting(trx)
 				.returning('email')
 				.insert({
 					hash,
