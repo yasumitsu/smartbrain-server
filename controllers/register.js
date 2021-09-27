@@ -1,5 +1,6 @@
-module.exports = Register = (req, res, knex, bcrypt) => {
+module.exports = Register = (knex, bcrypt) => (req, res) => {
 	const { email, name, password } = req.body;
+	if (!email || !name || !password) return res.status(400).json('invalid input');
 	const hash = bcrypt.hashSync(password);
 	knex
 		.transaction((trx) => {

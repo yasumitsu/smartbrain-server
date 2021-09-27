@@ -1,4 +1,4 @@
-module.exports = Profile = (req, res, knex) => {
+module.exports = Profile = (knex) => (req, res) => {
 	const { id } = req.params;
 	knex
 		.select('*')

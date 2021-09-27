@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt-nodejs');
 const register = require('./controllers/register');
 const signin = require('./controllers/signin');
 const profile = require('./controllers/profile');
-const image = require('./controllers/image');
+const { image, apiCall } = require('./controllers/image');
 const knex = require('knex')({
 	client: 'pg',
 	connection: {
@@ -25,21 +25,15 @@ app.get('/', (req, res) => {
 	res.send('it works');
 });
 
-app.post('/signin', (req, res) => {
-	signin(req, res, knex, bcrypt);
-});
+app.post('/signin', signin(knex, bcrypt));
 
-app.post('/register', (req, res) => {
-	register(req, res, knex, bcrypt);
-});
+app.post('/register', register(knex, bcrypt));
 
-app.get('/profile/:id', (req, res) => {
-	profile(req, res, knex);
-});
+app.get('/profile/:id', profile(knex));
 
-app.put('/image', (req, res) => {
-	image(req, res, knex);
-});
+app.put('/image', image(knex));
+
+app.post('/imageurl', apiCall());
 
 app.listen(3000, () => {
 	console.log('listening on port 3000');
